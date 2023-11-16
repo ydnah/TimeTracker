@@ -93,37 +93,52 @@ def main():
     except HttpError as error:
         print('An error occurred: %s' % error)
 
+# Function to create google calander event
+# creds - google calander users credentials, desc - app detected by psutil
+# startTime and endTime - times application was started and ended
 def createEvent(creds, desc, startTime, endTime):
+    # specific format for creating an event on google calendar
     event = {
             'summary': desc,
             'start': {
+                # formating startTime
                 'dateTime': startTime.isoformat() + 'Z',
                 'timeZone': 'Europe/London',
             },
             'end': {
+                # formatting endTime
                 'dateTime': endTime.isoformat() + 'Z',
                 'timeZone': 'Europe/London',
             }
         }
     
+    # Adding the event to google calendar
     service = build('calendar', 'v3', credentials=creds)
     event = service.events().insert(calendarId = 'primary', body = event).execute()
     print('Event created: %s' % (event.get('htmlLink')))
 
+# Function to create database input
+# application - detected from psutil, startTime and endTime - times application was started and ended
 def addData(application, startTime, endTime):
     try:
         con = sqlite3.connect("timetable.db")
         cur = con.cursor()
+        # Calulate the duarion the app was opened in hours
         duration = (endTime - startTime).total_seconds() / 3600
         
+        # Creating the insert
         insert = (application, 'samal', "{:.2f}".format(duration), 'automatic')
+        # executing the insert in desired table in database
         cur.execute("INSERT INTO time (application, user, duration, type) VALUES(?, ?, ?, ?)", insert)
+        # committing the insert to the database
         con.commit()
         cur.close()
-        
+    
+    # Print any errors that occured during insert
     except sqlite3.Error as error:
         print("Error: ", error)
-        
+    
+    # After insert close connection to the database
     finally:
         if con:
             con.close()
